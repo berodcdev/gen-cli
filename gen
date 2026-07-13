@@ -1,0 +1,105 @@
+#!/bin/bash
+# gen — gera secrets criptograficamente seguros e copia pro clipboard.
+# Uso: gen [tipo] [tamanho]
+# Tipos: hex (padrão), b64, uuid, alnum, pass — veja `gen --help`.
+set -euo pipefail
+
+# Cores só quando a saída é um terminal
+if [[ -t 1 ]]; then
+  B=$'\033[1m'; C=$'\033[36m'; G=$'\033[32m'; D=$'\033[2m'; R=$'\033[0m'
+else
+  B=''; C=''; G=''; D=''; R=''
+fi
+
+ajuda() {
+  cat <<EOF
+
+  ${B}🔐 gen${R} ${D}—${R} gerador de secrets criptograficamente seguros
+
+  ${B}USO${R}
+    gen ${C}[tipo]${R} ${C}[tamanho]${R}
+
+  ${B}TIPOS${R}
+    ${C}hex${R}    bytes aleatórios em hexadecimal     ${D}(padrão · 32 bytes)${R}
+    ${C}b64${R}    bytes aleatórios em base64          ${D}(bom pra JWT secret)${R}
+    ${C}uuid${R}   UUID v4 em minúsculas               ${D}(ignora tamanho)${R}
+    ${C}alnum${R}  só letras e números [A-Za-z0-9]     ${D}(seguro pra URL/env/header)${R}
+    ${C}pass${R}   letras, números e símbolos          ${D}(senha forte · 32 caracteres)${R}
+    ${C}ssh${R}    passphrase forte pra chave SSH      ${D}(seguro pra shell · 40 caracteres)${R}
+
+  ${B}EXEMPLOS${R}
+    ${G}gen${R}           ${D}# 32 bytes em hex${R}
+    ${G}gen b64 48${R}    ${D}# JWT secret com 48 bytes em base64${R}
+    ${G}gen uuid${R}      ${D}# UUID v4${R}
+    ${G}gen pass 24${R}   ${D}# senha forte de 24 caracteres${R}
+    ${G}gen ssh${R}       ${D}# passphrase de 40 caracteres pra chave SSH${R}
+
+  ${D}desenvolvido por Bernardo Rodrigues · github.com/berodcdev${R}
+
+EOF
+}
+
+TIPO="${1:-hex}"
+TAMANHO="${2:-}"
+
+if [[ "$TIPO" == "-h" || "$TIPO" == "--help" ]]; then
+  ajuda
+  exit 0
+fi
+
+# Sem tamanho explícito, cada tipo tem seu padrão (ssh prefere passphrase longa).
+if [[ -z "$TAMANHO" ]]; then
+  case "$TIPO" in
+    ssh) TAMANHO=40 ;;
+    *)   TAMANHO=32 ;;
+  esac
+fi
+
+if ! [[ "$TAMANHO" =~ ^[0-9]+$ ]] || [[ "$TAMANHO" -eq 0 ]]; then
+  echo "Erro: tamanho inválido: '$TAMANHO' (use um número inteiro maior que zero)" >&2
+  exit 1
+fi
+
+# Extrai $TAMANHO caracteres do charset dado, lendo de /dev/urandom.
+# Lê um bloco grande de uma vez pra evitar SIGPIPE com pipefail.
+de_urandom() {
+  local charset="$1" saida
+  saida="$(head -c $((TAMANHO * 64)) /dev/urandom | LC_ALL=C tr -dc "$charset")"
+  printf '%s' "${saida:0:TAMANHO}"
+}
+
+case "$TIPO" in
+  hex)
+    SECRET="$(openssl rand -hex "$TAMANHO")"
+    ;;
+  b64)
+    SECRET="$(openssl rand -base64 "$TAMANHO" | tr -d '\n')"
+    ;;
+  uuid)
+    SECRET="$(uuidgen | tr '[:upper:]' '[:lower:]')"
+    ;;
+  alnum)
+    SECRET="$(de_urandom 'A-Za-z0-9')"
+    ;;
+  pass)
+    SECRET="$(de_urandom 'A-Za-z0-9!@#$%^&*()_+=-')"
+    ;;
+  ssh)
+    # Mesmo charset de pass: sem aspas/barra, seguro pra colar em ssh-keygen -N '...'
+    SECRET="$(de_urandom 'A-Za-z0-9!@#$%^&*()_+=-')"
+    ;;
+  *)
+    echo "Erro: tipo inválido: '$TIPO'" >&2
+    ajuda >&2
+    exit 1
+    ;;
+esac
+
+# printf '%s' sem newline: evita copiar um '\n' junto com o secret
+printf '%s' "$SECRET" | pbcopy
+printf '%s\n' "$SECRET"
+echo "${G}✓${R} ${TIPO} · ${#SECRET} caracteres ${D}· copiado pro clipboard${R}" >&2
+
+if [[ "$TIPO" == "ssh" ]]; then
+  echo "  ${D}dica: ssh-keygen -t ed25519 -N \"\$(pbpaste)\" -f ~/.ssh/minha-chave${R}" >&2
+fi
