@@ -11,7 +11,7 @@ Set Padding 24
 Set Theme "Catppuccin Mocha"
 Set TypingSpeed 60ms
 
-# Setup invisível: garante `gen` no PATH e prompt limpo
+# Setup invisível: garante `gensec` no PATH e prompt limpo
 Hide
 Type `export PATH="$HOME/bin:$PATH"; PROMPT='%F{6}❯%f '; clear`
 Enter
@@ -19,32 +19,32 @@ Show
 
 Sleep 800ms
 
-Type "gen"
+Type "gensec"
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "gen b64 48"
+Type "gensec b64 48"
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "gen uuid"
+Type "gensec uuid"
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "gen pass 24"
+Type "gensec pass 24"
 Sleep 500ms
 Enter
 Sleep 2s
 
-Type "gen ssh"
+Type "gensec ssh"
 Sleep 500ms
 Enter
 Sleep 2500ms
 
-Type "gen -h"
+Type "gensec -h"
 Sleep 500ms
 Enter
 Sleep 4s
