@@ -6,7 +6,7 @@
 
 CLI de arquivo único para gerar **secrets criptograficamente seguros** no macOS e no Linux, copiando direto pro clipboard. Sem dependências além do que já vem no sistema.
 
-![Demonstração do gensec gerando secrets e copiando pro clipboard](docs/demo.gif)
+![Demonstração do gensec gerando secrets e copiando pro clipboard](assets/demo.gif)
 
 ## Por que existe
 
